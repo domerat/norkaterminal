@@ -1,0 +1,31 @@
+[package]
+name = "norka_terminal"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+argon2 = "0.6.0"
+async-trait = "0.1.92"
+axum = { version = "0.8.9", features = ["macros"] }
+base64 = "0.23.1"
+dotenvy = "0.15.7"
+futures = "0.3.34"
+moka = { version = "0.12.16", features = ["future"] }
+openmeteo-rs = "1.0.0"
+password-hash = "0.6.1"
+rand = "0.10.3"
+ratatui = "0.30.2"
+reqwest = { version = "0.13.5", features = ["json", "multipart", "query", "rustls-no-provider", "stream"] }
+russh = "0.64.1"
+sea-orm = { version = "2.0.4", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "debug-print", "with-uuid", "with-time", "with-json", "with-bigdecimal"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+serde_repr = "0.1.21"
+shlex = "2.0.1"
+ssh-key = "0.6.7"
+thiserror = "2.0.21"
+tokio = { version = "1.53.2", features = ["full"] }
+tracing = { version = "0.1.44", features = ["async-await"] }
+tracing-subscriber = { version = "0.3.23", features = ["json", "chrono", "local-time", "time"] }
+uuid = { version = "1.27.0", features = ["v4"] }
