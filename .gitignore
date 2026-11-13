@@ -1,3 +1,4 @@
 /target
+/devstuff
 .env
 database.db

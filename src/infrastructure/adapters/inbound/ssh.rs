@@ -1,5 +1,5 @@
 use russh::keys::ssh_encoding::Encode;
-use russh::keys::{Certificate, *};
+use russh::keys::*;
 use russh::server::{Msg, Session};
 use russh::*;
 
@@ -17,7 +17,6 @@ pub enum AccessLevel {
 }
 
 pub struct ClientSession {
-    current_access_level: AccessLevel,
     current_buffer: Vec<u8>,
     history: Vec<String>,
     core: std::sync::Arc<crate::application::app::Core>
@@ -26,7 +25,6 @@ pub struct ClientSession {
 impl ClientSession {
     pub fn new(core: std::sync::Arc<crate::application::app::Core>) -> ClientSession {
         ClientSession {
-            current_access_level: AccessLevel::Unauthenticated,
             current_buffer: vec![],
             history: vec![],
             core
@@ -69,18 +67,30 @@ impl server::Handler for ClientSession {
 
     async fn auth_publickey(
         &mut self,
-        _: &str,
+        _user: &str,
         _key: &ssh_key::PublicKey,
     ) -> Result<server::Auth, Self::Error> {
-        Ok(server::Auth::Accept)
-    }
+        let key_path = format!("id_ed25519.{}.pub", _user);
 
-    async fn auth_openssh_certificate(
-        &mut self,
-        _user: &str,
-        _certificate: &Certificate,
-    ) -> Result<server::Auth, Self::Error> {
-        Ok(server::Auth::Accept)
+        match russh::keys::load_public_key(std::path::Path::new(&key_path)) {
+            Ok(allowed_key) => {
+                if _key == &allowed_key {
+                    Ok(russh::server::Auth::Accept)
+                } else {
+                    Ok(russh::server::Auth::Reject {
+                        partial_success: false,
+                        proceed_with_methods: Some(MethodSet::server_supported())
+                    })
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to load server-side public key file: {}", e);
+                Ok(russh::server::Auth::Reject {
+                    partial_success: false,
+                    proceed_with_methods: Some(MethodSet::server_supported())
+                })
+            }
+        }
     }
 
     async fn data(
@@ -94,14 +104,18 @@ impl server::Handler for ClientSession {
                 3 => {
                     return Err(russh::Error::Disconnect);
                 }
-                // Handle Enter key: Carriage Return (\r) or Line Feed (\n)
                 b'\r' | b'\n' => {
-                    // 1. Process the accumulated command/text 
                     if !self.current_buffer.is_empty() {
                         let echo = CryptoVec::from_slice(b"\r\n");
                         session.data(channel, echo.encode_bytes()?)?;
 
-                        let query_ : String = String::from_utf8(self.current_buffer.to_vec()).unwrap();
+                        let query_ : String = match String::from_utf8(self.current_buffer.to_vec()) {
+                            Ok(str_) => str_,
+                            Err(err) => {
+                                tracing::error!("Cannot parse buffer: {}", err);
+                                return Err(russh::Error::Disconnect);
+                            }
+                        };
 
                         if query_.to_lowercase() == "exit" {
                             return Err(russh::Error::Disconnect)
@@ -125,26 +139,20 @@ impl server::Handler for ClientSession {
                         self.history.push(query_);
                     }
 
-                    // 2. Clear the buffer for the next input
                     self.current_buffer.clear();
 
-                    // 3. Echo a newline back to the client terminal
                     let echo = CryptoVec::from_slice(b"\r\n(terminal)# ");
                     session.data(channel, echo.encode_bytes()?)?;
                 }
-                // Handle Backspace (ASCII 127 or 8)
                 127 | 8 => {
                     if self.current_buffer.pop().is_some() {
-                        // Move cursor back, overwrite char with space, move back again
                         let echo = CryptoVec::from_slice(b"\x08 \x08");
                         session.data(channel, echo.encode_bytes()?)?;
                     }
                 }
-                // Handle normal printable ASCII characters
                 32..=126 => {
                     self.current_buffer.push(byte);
 
-                    // Echo the character back to the client so they see what they type
                     let echo = CryptoVec::from_slice(&[byte]);
                     session.data(channel, echo.encode_bytes()?)?;
                 }

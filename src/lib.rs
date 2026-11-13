@@ -5,7 +5,6 @@ pub mod infrastructure {
         pub mod inbound {
             pub mod dto;
             pub mod ssh;
-            pub mod http_server;
         }
 
         pub mod outbound {
@@ -16,7 +15,6 @@ pub mod infrastructure {
 }
 
 pub mod middlewares {
-    pub mod http_logging_middleware;
 }
 
 pub mod application {

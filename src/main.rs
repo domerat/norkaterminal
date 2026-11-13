@@ -30,14 +30,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let russh_server = tokio::spawn(async move {
-        app.inbound_ssh_adapter.run_on_address(std::sync::Arc::from(app.inbound_ssh_configuration), app.inbound_ssh_listener).await;
-    });     
+        let _ = app.inbound_ssh_adapter.run_on_address(std::sync::Arc::from(app.inbound_ssh_configuration), app.inbound_ssh_listener).await;
+    });      
 
-    let axum_server = tokio::spawn(async move {
-        axum::serve(app.inbound_http_listener, app.inbound_http_adapter.create()).await;
-    });
-
-    tokio::join!(russh_server, axum_server);
+    let _ = tokio::join!(russh_server);
 
     Ok(())
 }

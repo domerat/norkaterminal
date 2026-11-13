@@ -35,7 +35,7 @@ impl Core {
 impl InboundPort for Core {
     async fn command(&self, command: AppCommandRequest) -> Result<AppCommandResponse, DomainException> {
         let parser = crate::application::parser::Parser::new();
-        let result = parser.parse(command.query)?;
+        let result = parser.parse(command.query)?;        
 
         match result.command {
             CommandTypes::WEATHER => {
@@ -51,7 +51,7 @@ impl InboundPort for Core {
             CommandTypes::FX => {
                 let currency_a = result.args.first().cloned().unwrap_or_else(|| "USD".to_string());
                 let currency_b = result.args.get(1).cloned().unwrap_or_else(|| "CHF".to_string());
-                let amount = result.args.get(2).cloned().unwrap_or_else(|| "1".to_string()).parse::<f64>().unwrap_or_else(|_| 0.0);
+                let amount = result.args.get(2).cloned().unwrap_or_else(|| "1".to_string()).parse::<f64>().unwrap_or(1.0);
 
                 let mut responses = crate::application::helpers::fetch_currency_rate_from_modules(&self.fx_modules, &currency_a, &currency_b).await?;
 
@@ -139,7 +139,7 @@ impl InboundPort for Core {
     }
     
     async fn logoff(&self) {
-
+        // truly? Idk what to write here. It's JWTs! 
     }
 }
 
